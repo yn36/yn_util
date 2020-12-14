@@ -1,12 +1,6 @@
 use super::*;
 use mongodb::{self, Client, Collection};
 
-macro_rules! collection {
-    ($struct:ident) => {{
-        println("{:?}", $struct)
-    }};
-}
-
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Mongodb {
     pub host: String,
@@ -42,4 +36,12 @@ impl Mongodb {
     pub fn collection(MONGO: Client, data_base: String, coll_name: String) -> Collection {
         MONGO.database(&data_base).collection(coll_name.as_str())
     }
+}
+
+/// 初始化数据库
+pub fn create_mongo_client(conn_url: String) -> Client {
+    info!("数据库建立链接,{}", &conn_url);
+    Client::with_uri_str(&conn_url)
+        .ok()
+        .expect("数据库链接失败")
 }
