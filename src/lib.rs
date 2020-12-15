@@ -1,11 +1,10 @@
-use lazy_static::*;
 use log::info;
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 
 #[macro_use]
 pub mod db;
-pub mod jwt;
 pub mod date_time;
+pub mod jwt;
 
 #[cfg(test)]
 mod tests {

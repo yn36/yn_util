@@ -3,6 +3,8 @@ use crate::date_time;
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, TokenData, Validation};
 use serde::{de, ser, Serialize};
 
+/// secret key
+pub const SECRET_KEY: &[u8] = b"ynos";
 /// 有效期一天
 pub const DAY_ONE: u64 = 86400;
 
@@ -21,9 +23,9 @@ pub struct UserToken {
 /// # Examples
 /// ```rust
 /// let key = b"ynos";
-/// let token = encode_by("id","name",&key);
+/// let token = encode_by("id","name");
 /// ```
-pub fn encode(id: &str, name: &str, secret_key: &[u8]) -> String {
+pub fn encode(id: &str, name: &str) -> String {
     let now = date_time::timestamp();
     let playload = UserToken {
         exp: now + DAY_ONE,
@@ -33,7 +35,7 @@ pub fn encode(id: &str, name: &str, secret_key: &[u8]) -> String {
     jsonwebtoken::encode(
         &Header::default(),
         &playload,
-        &EncodingKey::from_secret(&*secret_key),
+        &EncodingKey::from_secret(&*SECRET_KEY),
     )
     .unwrap()
 }
@@ -60,13 +62,10 @@ pub fn encode_by<T: ser::Serialize>(data: &T, secret_key: &[u8]) -> String {
 }
 
 /// 解码authorization字段 - 默认方式
-pub fn decode(
-    token: &str,
-    secret_key: &[u8],
-) -> jsonwebtoken::errors::Result<TokenData<UserToken>> {
+pub fn decode(token: &str) -> jsonwebtoken::errors::Result<TokenData<UserToken>> {
     jsonwebtoken::decode::<UserToken>(
         token,
-        &DecodingKey::from_secret(&*secret_key),
+        &DecodingKey::from_secret(&*SECRET_KEY),
         &Validation::default(),
     )
 }
