@@ -33,8 +33,8 @@ impl Mongodb {
     }
 
     /// 获取数据库连接
-    pub fn collection(MONGO: Client, data_base: String, coll_name: String) -> Collection {
-        MONGO.database(&data_base).collection(coll_name.as_str())
+    pub fn collection(mongo: Client, data_base: String, coll_name: String) -> Collection {
+        mongo.database(&data_base).collection(coll_name.as_str())
     }
 }
 
