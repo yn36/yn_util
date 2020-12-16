@@ -1,15 +1,11 @@
 use log::info;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[macro_use]
 pub mod db;
 pub mod date_time;
 pub mod jwt;
+pub mod utils;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+#[macro_use]
+extern crate anyhow;
