@@ -1,6 +1,8 @@
 use super::*;
 use actix_web::{error, HttpResponse};
+use bson::ordered::OrderedDocument;
 use bson::Document;
+use md5;
 use mongodb::Cursor;
 use thiserror::Error;
 
@@ -66,7 +68,8 @@ where
 
 impl<T: Serialize> Resp<T> {
     #[allow(dead_code)]
-    pub(crate) fn ok(data: T, message: &str, page: u64, page_size: u64, total: u64) -> Self {
+    #[inline]
+    pub fn ok(data: T, message: &str, page: u64, page_size: u64, total: u64) -> Self {
         Resp {
             success: true,
             code: 200,
@@ -79,13 +82,15 @@ impl<T: Serialize> Resp<T> {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn to_json_result(&self) -> Result<HttpResponse, BusinessError> {
+    pub fn to_json_result(&self) -> Result<HttpResponse, BusinessError> {
         Ok(HttpResponse::Ok().json(self))
     }
 }
 
 impl Resp<()> {
-    pub(crate) fn err(error: i32, message: &str) -> Self {
+    #[allow(dead_code)]
+    #[inline]
+    pub fn err(error: i32, message: &str) -> Self {
         Resp {
             success: false,
             code: error,
@@ -111,4 +116,64 @@ impl CursorAsVec for Cursor {
         })
         .collect()
     }
+}
+
+// pub trait OrderedDocumentAsStruct {
+//     fn as_struct<'a, T: Serialize + Deserialize<'a>>(&mut self);
+// }
+
+// impl OrderedDocumentAsStruct for OrderedDocument {
+//     fn as_struct<'a, T: Serialize + Deserialize<'a>>(&mut self) {
+//         let keys = self.keys();
+//         let r: Vec<String> = keys
+//             .filter(|k| self.is_null(k))
+//             .map(|x| x.to_owned())
+//             .collect();
+//         // info!("r = {:?}", r);
+//     }
+// }
+
+/// 安全密鑰
+const SECRET_KEYS: &str = "!s@w4$qS%^(_123-=0Xha9452sLW^%sfa9)\\";
+
+/// md5
+#[inline]
+pub fn md5_str(content: &str) -> String {
+    let encrypt = md5::compute(content);
+    format!("{:x}", encrypt)
+}
+
+/// 自定义 安全密钥 生成密码
+#[inline]
+pub fn get_password(real_password: &str, secret_key: &str, secret: &str) -> String {
+    let origin = format!("{}-{}-{}", real_password, secret_key, secret);
+    md5_str(origin.as_str())
+}
+
+/// 使用默认 安全密钥 生成密码
+#[inline]
+pub fn get_password_default(real_password: &str, secret: &str) -> String {
+    get_password(real_password, SECRET_KEYS, secret)
+}
+
+/// 结构体转mongodb文档
+#[inline]
+pub fn struct_to_document<'a, T: Sized + Serialize + Deserialize<'a>>(
+    t: &T,
+) -> Option<OrderedDocument> {
+    let mid: Option<OrderedDocument> = bson::to_bson(t)
+        .ok()
+        .map(|x| x.as_document().unwrap().to_owned());
+
+    mid.map(|mut doc| {
+        let keys = doc.keys();
+        let rm: Vec<String> = keys
+            .filter(|k| doc.is_null(k))
+            .map(|x| x.to_owned())
+            .collect();
+        for x in rm {
+            doc.remove(&x);
+        }
+        doc
+    })
 }
