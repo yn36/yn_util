@@ -1,10 +1,12 @@
 use super::*;
 use actix_web::{error, HttpResponse};
-use bson::ordered::OrderedDocument;
-use bson::Document;
+// use bson::ordered::OrderedDocument;
+// use bson::Document;
 use md5;
-use mongodb::Cursor;
+// use mongodb::Cursor;
 use thiserror::Error;
+
+pub type Result<T> = std::result::Result<T, BusinessError>;
 
 #[derive(Error, Debug)]
 pub enum BusinessError {
@@ -82,7 +84,7 @@ impl<T: Serialize> Resp<T> {
     }
 
     #[allow(dead_code)]
-    pub fn to_json_result(&self) -> Result<HttpResponse, BusinessError> {
+    pub fn to_json_result(&self) -> std::result::Result<HttpResponse, BusinessError> {
         Ok(HttpResponse::Ok().json(self))
     }
 }
@@ -103,33 +105,18 @@ impl Resp<()> {
     }
 }
 
-pub trait CursorAsVec {
-    fn as_vec<'a, T: Serialize + Deserialize<'a>>(&mut self) -> Vec<T>;
-}
-
-impl CursorAsVec for Cursor {
-    fn as_vec<'a, T: Serialize + Deserialize<'a>>(&mut self) -> Vec<T> {
-        self.map(|item| {
-            let doc: Document = item.unwrap();
-            let bson = bson::Bson::Document(doc);
-            return bson::from_bson(bson).unwrap();
-        })
-        .collect()
-    }
-}
-
-// pub trait OrderedDocumentAsStruct {
-//     fn as_struct<'a, T: Serialize + Deserialize<'a>>(&mut self);
+// pub trait CursorAsVec {
+//     fn as_vec<'a, T: Serialize + Deserialize<'a>>(&mut self) -> Vec<T>;
 // }
 
-// impl OrderedDocumentAsStruct for OrderedDocument {
-//     fn as_struct<'a, T: Serialize + Deserialize<'a>>(&mut self) {
-//         let keys = self.keys();
-//         let r: Vec<String> = keys
-//             .filter(|k| self.is_null(k))
-//             .map(|x| x.to_owned())
-//             .collect();
-//         // info!("r = {:?}", r);
+// impl CursorAsVec for Cursor {
+//     fn as_vec<'a, T: Serialize + Deserialize<'a>>(&mut self) -> Vec<T> {
+//         self.map(|item| {
+//             let doc: Document = item.unwrap();
+//             let bson = bson::Bson::Document(doc);
+//             return bson::from_bson(bson).unwrap();
+//         })
+//         .collect()
 //     }
 // }
 
@@ -156,24 +143,24 @@ pub fn get_password_default(real_password: &str, secret: &str) -> String {
     get_password(real_password, SECRET_KEYS, secret)
 }
 
-/// 结构体转mongodb文档
-#[inline]
-pub fn struct_to_document<'a, T: Sized + Serialize + Deserialize<'a>>(
-    t: &T,
-) -> Option<OrderedDocument> {
-    let mid: Option<OrderedDocument> = bson::to_bson(t)
-        .ok()
-        .map(|x| x.as_document().unwrap().to_owned());
+// /// 结构体转mongodb文档
+// #[inline]
+// pub fn struct_to_document<'a, T: Sized + Serialize + Deserialize<'a>>(
+//     t: &T,
+// ) -> Option<OrderedDocument> {
+//     let mid: Option<OrderedDocument> = bson::to_bson(t)
+//         .ok()
+//         .map(|x| x.as_document().unwrap().to_owned());
 
-    mid.map(|mut doc| {
-        let keys = doc.keys();
-        let rm: Vec<String> = keys
-            .filter(|k| doc.is_null(k))
-            .map(|x| x.to_owned())
-            .collect();
-        for x in rm {
-            doc.remove(&x);
-        }
-        doc
-    })
-}
+//     mid.map(|mut doc| {
+//         let keys = doc.keys();
+//         let rm: Vec<String> = keys
+//             .filter(|k| doc.is_null(k))
+//             .map(|x| x.to_owned())
+//             .collect();
+//         for x in rm {
+//             doc.remove(&x);
+//         }
+//         doc
+//     })
+// }
