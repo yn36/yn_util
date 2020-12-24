@@ -29,10 +29,6 @@ impl Mongodb {
         info!("数据库建立连接,{}", &conn_url);
         let client_options = ClientOptions::parse(&conn_url).await.unwrap();
         Client::with_options(client_options).unwrap()
-        // Client::with_uri_str(&conn_url).await.unwrap()
-        // Client::with_uri_str(&conn_url)
-        //     .ok()
-        //     .expect("数据库连接失败")
     }
 
     /// 获取数据库连接
