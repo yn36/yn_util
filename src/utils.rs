@@ -1,10 +1,12 @@
 use super::*;
 use actix_web::{error, HttpResponse};
-use bson::ordered::OrderedDocument;
 use bson::Document;
 use md5;
 use mongodb::Cursor;
+use serde::de::DeserializeOwned;
 use thiserror::Error;
+use futures::StreamExt;
+
 
 #[derive(Error, Debug)]
 pub enum BusinessError {
@@ -102,36 +104,38 @@ impl Resp<()> {
         }
     }
 }
-
-pub trait CursorAsVec {
-    fn as_vec<'a, T: Serialize + Deserialize<'a>>(&mut self) -> Vec<T>;
-}
-
-impl CursorAsVec for Cursor {
-    fn as_vec<'a, T: Serialize + Deserialize<'a>>(&mut self) -> Vec<T> {
-        self.map(|item| {
-            let doc: Document = item.unwrap();
-            let bson = bson::Bson::Document(doc);
-            return bson::from_bson(bson).unwrap();
-        })
-        .collect()
-    }
-}
-
-// pub trait OrderedDocumentAsStruct {
-//     fn as_struct<'a, T: Serialize + Deserialize<'a>>(&mut self);
+// pub trait CursorAsVec {
+//     fn as_vec<'a, T: Serialize + Deserialize<'a>>(&mut self) -> Vec<T>;
 // }
 
-// impl OrderedDocumentAsStruct for OrderedDocument {
-//     fn as_struct<'a, T: Serialize + Deserialize<'a>>(&mut self) {
-//         let keys = self.keys();
-//         let r: Vec<String> = keys
-//             .filter(|k| self.is_null(k))
-//             .map(|x| x.to_owned())
-//             .collect();
-//         // info!("r = {:?}", r);
+// impl CursorAsVec for Cursor {
+//     fn as_vec<'a, T: Serialize + Deserialize<'a>>(&mut self) -> Vec<T> {
+//         self.map(|item| {
+//             let doc = item.unwrap();
+//             let bson = bson::Bson::Document(doc);
+//             return bson::from_bson(bson).unwrap();
+//         })
+//         .collect()
 //     }
 // }
+
+#[async_trait::async_trait]
+pub trait CursorAsVec {
+    async fn as_vec<T: DeserializeOwned + Send>(&mut self) -> Result<Vec<T>, BusinessError>;
+}
+
+#[async_trait::async_trait]
+impl CursorAsVec for Cursor {
+    async fn as_vec<T: DeserializeOwned + Send>(&mut self) -> Result<Vec<T>, BusinessError> {
+        let mut list = vec![];
+        while let Some(result) = self.next().await {
+            let data = bson::from_document(result?)
+                .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })?;
+            list.push(data);
+        }
+        Ok(list)
+    }
+}
 
 /// 安全密鑰
 const SECRET_KEYS: &str = "!s@w4$qS%^(_123-=0Xha9452sLW^%sfa9)\\";
@@ -158,10 +162,8 @@ pub fn get_password_default(real_password: &str, secret: &str) -> String {
 
 /// 结构体转mongodb文档
 #[inline]
-pub fn struct_to_document<'a, T: Sized + Serialize + Deserialize<'a>>(
-    t: &T,
-) -> Option<OrderedDocument> {
-    let mid: Option<OrderedDocument> = bson::to_bson(t)
+pub fn struct_to_document<'a, T: Sized + Serialize + Deserialize<'a>>(t: &T) -> Option<Document> {
+    let mid: Option<Document> = bson::to_bson(t)
         .ok()
         .map(|x| x.as_document().unwrap().to_owned());
 

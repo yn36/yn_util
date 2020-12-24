@@ -1,5 +1,5 @@
 use super::*;
-use mongodb::{self, Client, Collection};
+use mongodb::{self, options::ClientOptions, Client, Collection};
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Mongodb {
@@ -20,16 +20,19 @@ impl Mongodb {
     }
 
     /// 初始化 连接数据库
-    pub fn create_mongo_client(mongo: Mongodb) -> Client {
+    pub async fn create_mongo_client(mongo: Mongodb) -> Client {
         // let mongo: Mongodb = Mongodb::default();
         let conn_url: String = format!(
             "mongodb://{}:{}@{}:{}",
             mongo.user, mongo.password, mongo.host, mongo.port
         );
         info!("数据库建立连接,{}", &conn_url);
-        Client::with_uri_str(&conn_url)
-            .ok()
-            .expect("数据库连接失败")
+        let client_options = ClientOptions::parse(&conn_url).await.unwrap();
+        Client::with_options(client_options).unwrap()
+        // Client::with_uri_str(&conn_url).await.unwrap()
+        // Client::with_uri_str(&conn_url)
+        //     .ok()
+        //     .expect("数据库连接失败")
     }
 
     /// 获取数据库连接
@@ -39,9 +42,8 @@ impl Mongodb {
 }
 
 /// 初始化数据库
-pub fn create_mongo_client(conn_url: String) -> Client {
+pub async fn create_mongo_client(conn_url: String) -> Client {
     info!("数据库建立链接,{}", &conn_url);
-    Client::with_uri_str(&conn_url)
-        .ok()
-        .expect("数据库链接失败")
+    let client_options = ClientOptions::parse(&conn_url).await.unwrap();
+    Client::with_options(client_options).unwrap()
 }
