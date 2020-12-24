@@ -7,7 +7,6 @@ use serde::de::DeserializeOwned;
 use thiserror::Error;
 use futures::StreamExt;
 
-
 #[derive(Error, Debug)]
 pub enum BusinessError {
     #[error("10001#字段上的验证错误: {field}")]
@@ -84,7 +83,7 @@ impl<T: Serialize> Resp<T> {
     }
 
     #[allow(dead_code)]
-    pub fn to_json_result(&self) -> Result<HttpResponse, BusinessError> {
+    pub fn to_json_result(&self) -> std::result::Result<HttpResponse, BusinessError> {
         Ok(HttpResponse::Ok().json(self))
     }
 }
