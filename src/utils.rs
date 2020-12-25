@@ -1,11 +1,11 @@
 use super::*;
 use actix_web::{error, HttpResponse};
 use bson::Document;
+use futures::StreamExt;
 use md5;
 use mongodb::Cursor;
 use serde::de::DeserializeOwned;
 use thiserror::Error;
-use futures::StreamExt;
 
 #[derive(Error, Debug)]
 pub enum BusinessError {
@@ -57,11 +57,11 @@ where
     // 响应信息
     messages: String,
     // 页数
-    page: u64,
+    page: i64,
     // 每页最大值
-    page_size: u64,
+    page_size: i64,
     // 查询内容总数
-    total: u64,
+    total: i64,
     code: i32,
     // 数据内容
     data: Option<T>,
@@ -70,7 +70,7 @@ where
 impl<T: Serialize> Resp<T> {
     #[allow(dead_code)]
     #[inline]
-    pub fn ok(data: T, message: &str, page: u64, page_size: u64, total: u64) -> Self {
+    pub fn ok(data: T, message: &str, page: i64, page_size: i64, total: i64) -> Self {
         Resp {
             success: true,
             code: 200,
@@ -103,20 +103,6 @@ impl Resp<()> {
         }
     }
 }
-// pub trait CursorAsVec {
-//     fn as_vec<'a, T: Serialize + Deserialize<'a>>(&mut self) -> Vec<T>;
-// }
-
-// impl CursorAsVec for Cursor {
-//     fn as_vec<'a, T: Serialize + Deserialize<'a>>(&mut self) -> Vec<T> {
-//         self.map(|item| {
-//             let doc = item.unwrap();
-//             let bson = bson::Bson::Document(doc);
-//             return bson::from_bson(bson).unwrap();
-//         })
-//         .collect()
-//     }
-// }
 
 #[async_trait::async_trait]
 pub trait CursorAsVec {

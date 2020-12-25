@@ -6,6 +6,7 @@ pub mod db;
 pub mod date_time;
 pub mod jwt;
 pub mod utils;
+pub mod dao;
 
 #[macro_use]
 extern crate lazy_static;
