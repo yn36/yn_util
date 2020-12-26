@@ -5,7 +5,10 @@ use core::fmt;
 use futures::StreamExt;
 use mongodb::{
     bson::doc,
-    options::{ClientOptions, CountOptions, FindOneOptions, FindOptions},
+    options::{
+        ClientOptions, CountOptions, FindOneAndUpdateOptions, FindOneOptions, FindOptions,
+        ReturnDocument,
+    },
     Client, Collection, Cursor, Database,
 };
 use serde::{
@@ -44,6 +47,7 @@ impl Dao {
         Dao { coll }
     }
 
+    /// 保存
     pub async fn save<T>(&self, data: &T) -> Result<ObjectId, BusinessError>
     where
         T: Serialize,
@@ -64,6 +68,7 @@ impl Dao {
         Ok(oid.to_owned())
     }
 
+    /// 根据id 查询一条
     pub async fn find_by_id<T>(&self, id: ObjectId) -> Result<Option<T>, BusinessError>
     where
         T: DeserializeOwned,
@@ -84,6 +89,27 @@ impl Dao {
         }
     }
 
+    /// 根据条件查询一条
+    pub async fn find_one<T>(&self, filter: Document) -> Result<Option<T>, BusinessError>
+    where
+        T: DeserializeOwned,
+    {
+        let mut opt = FindOneOptions::default();
+        opt.max_time = Some(Duration::from_secs(3));
+        let data = self.coll.find_one(filter, opt).await.unwrap();
+
+        match data {
+            Some(d) => {
+                let data: T = bson::from_document(d)
+                    .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })
+                    .unwrap();
+                Ok(Some(data))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// 查询
     pub async fn find<T>(
         &self,
         filter: Document,
@@ -124,6 +150,7 @@ impl Dao {
         }
     }
 
+    /// 获取查询总数
     pub async fn count(&self, filter: Document) -> Result<i64, BusinessError> {
         let opt = CountOptions::default();
         let count = self.coll.count_documents(Some(filter), opt).await;
@@ -131,6 +158,61 @@ impl Dao {
             Ok(count) => Ok(count),
             Err(e) => {
                 return Err(BusinessError::InternalError { source: anyhow!(e) })?;
+            }
+        }
+    }
+
+    /// 更新数据
+    pub async fn update<T>(&self, id: ObjectId, data: Document) -> Result<Option<T>, BusinessError>
+    where
+        T: DeserializeOwned,
+    {
+        let filter = doc! {"_id":id};
+        let mut doc = data;
+        doc.insert("update_time", date_time::timestamp());
+        doc.remove("_id");
+        let doc = doc! {"$set": doc};
+
+        let mut opt = FindOneAndUpdateOptions::default();
+        opt.return_document = Some(ReturnDocument::After);
+
+        let data = match self.coll.find_one_and_update(filter, doc, opt).await {
+            Ok(d) => d,
+            Err(_) => {
+                return Err(BusinessError::InternalError {
+                    source: anyhow!("修改失败"),
+                })
+            }
+        };
+
+        match data {
+            Some(d) => {
+                let data: T = bson::from_document(d)
+                    .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })
+                    .unwrap();
+                Ok(Some(data))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// 删除
+    pub async fn remove(&self, ids: String) -> Result<i64, BusinessError> {
+        let arr: Vec<&str> = ids.rsplit(",").collect();
+        let mut remids: Vec<ObjectId> = Vec::new();
+        for id in arr.iter() {
+            remids.push(ObjectId::with_string(*id).unwrap())
+        }
+        let mut doc: Document = doc! {};
+        doc.insert("$in", remids);
+        let d = doc! {"_id":doc};
+        let result = self.coll.delete_many(d, None).await;
+        match result {
+            Ok(res) => Ok(res.deleted_count),
+            Err(_) => {
+                return Err(BusinessError::InternalError {
+                    source: anyhow!("删除失败"),
+                })?
             }
         }
     }

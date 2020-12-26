@@ -13,7 +13,7 @@ pub enum BusinessError {
     ValidationError { field: String },
     #[error("10002#参数错误")]
     ArgumentError,
-    #[error("10000#发生内部错误。请稍后再试")]
+    #[error("10000#{source}")]
     InternalError {
         #[source]
         source: anyhow::Error,
