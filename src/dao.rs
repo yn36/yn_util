@@ -38,7 +38,7 @@ pub fn collection(name: &str) -> Collection {
 }
 
 pub struct Dao {
-    coll: Collection,
+    pub coll: Collection,
 }
 
 impl Dao {
@@ -59,7 +59,7 @@ impl Dao {
             .to_owned();
         doc.insert("create_time", date_time::timestamp());
         doc.insert("update_time", date_time::timestamp());
-        info!("doc = {:#?}", doc);
+        doc.insert("_id", ObjectId::new());
         let ret = self.coll.insert_one(doc, None).await?;
         let oid = ret
             .inserted_id
@@ -69,10 +69,7 @@ impl Dao {
     }
 
     /// 根据id 查询一条
-    pub async fn find_by_id<T>(&self, id: ObjectId) -> Result<Option<T>, BusinessError>
-    where
-        T: DeserializeOwned,
-    {
+    pub async fn find_by_id(&self, id: ObjectId) -> Result<Option<Document>, BusinessError> {
         let filter = doc! {"_id": id};
         let mut opt = FindOneOptions::default();
         opt.max_time = Some(Duration::from_secs(3));
@@ -80,9 +77,10 @@ impl Dao {
 
         match data {
             Some(d) => {
-                let data: T = bson::from_document(d)
-                    .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })
-                    .unwrap();
+                // let data: T = bson::from_document(d)
+                //     .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })
+                //     .unwrap();
+                let data = document_handle_id(d).unwrap();
                 Ok(Some(data))
             }
             None => Ok(None),
@@ -90,19 +88,14 @@ impl Dao {
     }
 
     /// 根据条件查询一条
-    pub async fn find_one<T>(&self, filter: Document) -> Result<Option<T>, BusinessError>
-    where
-        T: DeserializeOwned,
-    {
+    pub async fn find_one(&self, filter: Document) -> Result<Option<Document>, BusinessError> {
         let mut opt = FindOneOptions::default();
         opt.max_time = Some(Duration::from_secs(3));
         let data = self.coll.find_one(filter, opt).await.unwrap();
 
         match data {
             Some(d) => {
-                let data: T = bson::from_document(d)
-                    .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })
-                    .unwrap();
+                let data = document_handle_id(d).unwrap();
                 Ok(Some(data))
             }
             None => Ok(None),
@@ -110,17 +103,14 @@ impl Dao {
     }
 
     /// 查询
-    pub async fn find<T>(
+    pub async fn find(
         &self,
         filter: Document,
         limit: i64,
         page: i64,
         sort_name: &str,
         sort_order: &str,
-    ) -> Result<Vec<T>, BusinessError>
-    where
-        T: DeserializeOwned + Send,
-    {
+    ) -> Result<Vec<Document>, BusinessError> {
         let mut opt = FindOptions::default();
         // 限制条数
         opt.limit = Some(limit);
@@ -163,14 +153,27 @@ impl Dao {
     }
 
     /// 更新数据
-    pub async fn update<T>(&self, id: ObjectId, data: Document) -> Result<Option<T>, BusinessError>
-    where
-        T: DeserializeOwned,
-    {
+    pub async fn update(
+        &self,
+        id: ObjectId,
+        data: Document,
+    ) -> Result<Option<Document>, BusinessError> {
         let filter = doc! {"_id":id};
         let mut doc = data;
         doc.insert("update_time", date_time::timestamp());
         doc.remove("_id");
+
+        // 删除不需要的key
+        let keys = doc.keys();
+        let rm: Vec<String> = keys
+            .filter(|k| doc.is_null(k))
+            .map(|x| x.to_owned())
+            .collect();
+        info!("rm = {:?}", rm);
+        for x in rm {
+            doc.remove(&x);
+        }
+
         let doc = doc! {"$set": doc};
 
         let mut opt = FindOneAndUpdateOptions::default();
@@ -187,9 +190,11 @@ impl Dao {
 
         match data {
             Some(d) => {
-                let data: T = bson::from_document(d)
-                    .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })
-                    .unwrap();
+                // let data: T = bson::from_document(d)
+                //     .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })
+                //     .unwrap();
+                // Ok(Some(data))
+                let data = document_handle_id(d).unwrap();
                 Ok(Some(data))
             }
             None => Ok(None),

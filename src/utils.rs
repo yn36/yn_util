@@ -1,6 +1,6 @@
 use super::*;
 use actix_web::{error, HttpResponse};
-use bson::Document;
+use bson::{doc, oid::ObjectId, Document};
 use futures::StreamExt;
 use md5;
 use mongodb::Cursor;
@@ -106,16 +106,29 @@ impl Resp<()> {
 
 #[async_trait::async_trait]
 pub trait CursorAsVec {
-    async fn as_vec<T: DeserializeOwned + Send>(&mut self) -> Result<Vec<T>, BusinessError>;
+    async fn as_vec(&mut self) -> Result<Vec<Document>, BusinessError>;
 }
 
 #[async_trait::async_trait]
 impl CursorAsVec for Cursor {
-    async fn as_vec<T: DeserializeOwned + Send>(&mut self) -> Result<Vec<T>, BusinessError> {
+    async fn as_vec(&mut self) -> Result<Vec<Document>, BusinessError> {
         let mut list = vec![];
         while let Some(result) = self.next().await {
-            let data = bson::from_document(result?)
-                .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })?;
+            // let data = bson::from_document(result?)
+            //     .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })?;
+            // list.push(data);
+            let mut data = doc! {};
+            let d = result.unwrap();
+            data.insert(
+                "_id",
+                ObjectId::to_string(d.clone().get_object_id("_id").unwrap()),
+            );
+            // 为了让 _id 排在最前面
+            for k in d.clone().keys() {
+                if !k.eq("_id") {
+                    data.insert(k, d.get(k).unwrap());
+                }
+            }
             list.push(data);
         }
         Ok(list)
@@ -163,4 +176,24 @@ pub fn struct_to_document<'a, T: Sized + Serialize + Deserialize<'a>>(t: &T) -> 
         }
         doc
     })
+}
+
+/// 处理文档 _id
+#[inline]
+pub fn document_handle_id(doc: Document) -> Option<Document> {
+    let mut data = doc! {};
+    info!("doc = {:?}", doc);
+    let oid = match doc.get_object_id("_id") {
+        Ok(id) => id.to_hex(),
+        Err(_) => doc.get("_id").unwrap().to_string(),
+    };
+    info!("oid = {:?}",oid.as_str());
+    data.insert("_id", oid);
+    // 为了让 _id 排在最前面
+    for k in doc.clone().keys() {
+        if !k.eq("_id") {
+            data.insert(k, doc.get(k).unwrap());
+        }
+    }
+    Some(data)
 }
