@@ -182,12 +182,10 @@ pub fn struct_to_document<'a, T: Sized + Serialize + Deserialize<'a>>(t: &T) -> 
 #[inline]
 pub fn document_handle_id(doc: Document) -> Option<Document> {
     let mut data = doc! {};
-    info!("doc = {:?}", doc);
     let oid = match doc.get_object_id("_id") {
         Ok(id) => id.to_hex(),
         Err(_) => doc.get("_id").unwrap().to_string(),
     };
-    info!("oid = {:?}",oid.as_str());
     data.insert("_id", oid);
     // 为了让 _id 排在最前面
     for k in doc.clone().keys() {

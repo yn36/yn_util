@@ -169,16 +169,12 @@ impl Dao {
             .filter(|k| doc.is_null(k))
             .map(|x| x.to_owned())
             .collect();
-        info!("rm = {:?}", rm);
         for x in rm {
             doc.remove(&x);
         }
-
         let doc = doc! {"$set": doc};
-
         let mut opt = FindOneAndUpdateOptions::default();
         opt.return_document = Some(ReturnDocument::After);
-
         let data = match self.coll.find_one_and_update(filter, doc, opt).await {
             Ok(d) => d,
             Err(_) => {
