@@ -202,7 +202,15 @@ impl Dao {
         let arr: Vec<&str> = ids.rsplit(",").collect();
         let mut remids: Vec<ObjectId> = Vec::new();
         for id in arr.iter() {
-            remids.push(ObjectId::with_string(*id).unwrap())
+            let oid = match ObjectId::with_string(*id) {
+                Ok(oid) => oid,
+                Err(_) => {
+                    return Err(BusinessError::InternalError {
+                        source: anyhow!("_id 字段错误"),
+                    })
+                }
+            };
+            remids.push(oid)
         }
         let mut doc: Document = doc! {};
         doc.insert("$in", remids);
