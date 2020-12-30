@@ -132,7 +132,20 @@ impl Dao {
         }
 
         opt.sort = Some(sort);
-        let mut cursor = self.coll.find(Some(filter), opt).await.unwrap();
+
+        // 模糊查询
+        let keys = filter.keys();
+        let mut d = doc! {};
+        let mut list = vec![];
+        for k in keys.into_iter() {
+            // let doc =
+            //     doc! {k:{"$regex":filter.get(k).unwrap().as_str().unwrap(),"$options": "i"}}.into();
+            let doc = doc! { k: bson::Regex {pattern:filter.get(k).unwrap().as_str().unwrap().to_string(),options:"i".to_string()}}.into();
+            list.push(doc);
+        }
+        d.insert("$and", bson::Bson::Array(list));
+        // info!("d = {:?}", d);
+        let mut cursor = self.coll.find(Some(d), opt).await.unwrap();
         let list = cursor.as_vec().await;
         match list {
             Ok(list) => Ok(list),
