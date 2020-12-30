@@ -57,11 +57,11 @@ where
     // 响应信息
     messages: String,
     // 页数
-    page: i64,
+    page: Option<i64>,
     // 每页最大值
-    page_size: i64,
+    page_size: Option<i64>,
     // 查询内容总数
-    total: i64,
+    total: Option<i64>,
     code: i32,
     // 数据内容
     data: Option<T>,
@@ -70,15 +70,21 @@ where
 impl<T: Serialize> Resp<T> {
     #[allow(dead_code)]
     #[inline]
-    pub fn ok(data: T, message: &str, page: i64, page_size: i64, total: i64) -> Self {
+    pub fn ok(
+        data: Option<T>,
+        messages: &str,
+        page: Option<i64>,
+        page_size: Option<i64>,
+        total: Option<i64>,
+    ) -> Self {
         Resp {
             success: true,
             code: 200,
             page,
             page_size,
             total,
-            messages: message.to_owned(),
-            data: Some(data),
+            messages: messages.to_owned(),
+            data,
         }
     }
 
@@ -91,14 +97,14 @@ impl<T: Serialize> Resp<T> {
 impl Resp<()> {
     #[allow(dead_code)]
     #[inline]
-    pub fn err(error: i32, message: &str) -> Self {
+    pub fn err(error: i32, messages: &str) -> Self {
         Resp {
             success: false,
             code: error,
-            page: 0,
-            page_size: 0,
-            total: 0,
-            messages: message.to_owned(),
+            page: None,
+            page_size: None,
+            total: None,
+            messages: messages.to_owned(),
             data: None,
         }
     }

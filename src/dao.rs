@@ -106,26 +106,26 @@ impl Dao {
     pub async fn find(
         &self,
         filter: Document,
-        limit: i64,
-        page: i64,
-        sort_name: &str,
-        sort_order: &str,
+        limit: Option<i64>,
+        page: Option<i64>,
+        sort_name: Option<String>,
+        sort_order: Option<String>,
     ) -> Result<Vec<Document>, BusinessError> {
         let mut opt = FindOptions::default();
         // 限制条数
-        opt.limit = Some(limit);
+        opt.limit = Some(limit.unwrap_or(10));
 
         // 设置一页多少条
-        let skip = limit * (page - 1);
+        let skip = limit.unwrap_or(10) * (page.unwrap_or(1) - 1);
         opt.skip = Some(skip);
 
         // 设置查询排序  默认创建时间的倒序
         let mut sort = doc! {};
-        if !sort_name.is_empty() && !sort_order.is_empty() {
-            if sort_order.eq("desc") {
-                sort.insert(sort_name, -1);
+        if !sort_name.clone().unwrap_or("".to_string()).is_empty() && !sort_order.clone().unwrap_or("".to_string()).is_empty() {
+            if sort_order.unwrap().eq("desc") {
+                sort.insert(sort_name.unwrap(), -1);
             } else {
-                sort.insert(sort_name, 1);
+                sort.insert(sort_name.unwrap(), 1);
             }
         } else {
             sort.insert("create_time", -1);
@@ -140,11 +140,14 @@ impl Dao {
         for k in keys.into_iter() {
             // let doc =
             //     doc! {k:{"$regex":filter.get(k).unwrap().as_str().unwrap(),"$options": "i"}}.into();
-            let doc = doc! { k: bson::Regex {pattern:filter.get(k).unwrap().as_str().unwrap().to_string(),options:"i".to_string()}}.into();
+            let doc = doc! { k: bson::Regex {pattern:filter.get(k).unwrap().as_str().unwrap().to_string(),options:"m".to_string()}}.into();
             list.push(doc);
         }
-        d.insert("$and", bson::Bson::Array(list));
-        // info!("d = {:?}", d);
+        if list.len() > 0 {
+            d.insert("$and", bson::Bson::Array(list));
+        }
+        info!("d = {:?}", d);
+        info!("opt = {:#?}", opt);
         let mut cursor = self.coll.find(Some(d), opt).await.unwrap();
         let list = cursor.as_vec().await;
         match list {
@@ -156,7 +159,20 @@ impl Dao {
     /// 获取查询总数
     pub async fn count(&self, filter: Document) -> Result<i64, BusinessError> {
         let opt = CountOptions::default();
-        let count = self.coll.count_documents(Some(filter), opt).await;
+        // 模糊查询
+        let keys = filter.keys();
+        let mut d = doc! {};
+        let mut list = vec![];
+        for k in keys.into_iter() {
+            // let doc =
+            //     doc! {k:{"$regex":filter.get(k).unwrap().as_str().unwrap(),"$options": "i"}}.into();
+            let doc = doc! { k: bson::Regex {pattern:filter.get(k).unwrap().as_str().unwrap().to_string(),options:"m".to_string()}}.into();
+            list.push(doc);
+        }
+        if list.len() > 0 {
+            d.insert("$and", bson::Bson::Array(list));
+        }
+        let count = self.coll.count_documents(Some(d), opt).await;
         match count {
             Ok(count) => Ok(count),
             Err(e) => {
