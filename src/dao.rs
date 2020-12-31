@@ -121,7 +121,9 @@ impl Dao {
 
         // 设置查询排序  默认创建时间的倒序
         let mut sort = doc! {};
-        if !sort_name.clone().unwrap_or("".to_string()).is_empty() && !sort_order.clone().unwrap_or("".to_string()).is_empty() {
+        if !sort_name.clone().unwrap_or("".to_string()).is_empty()
+            && !sort_order.clone().unwrap_or("".to_string()).is_empty()
+        {
             if sort_order.unwrap().eq("desc") {
                 sort.insert(sort_name.unwrap(), -1);
             } else {
@@ -140,14 +142,18 @@ impl Dao {
         for k in keys.into_iter() {
             // let doc =
             //     doc! {k:{"$regex":filter.get(k).unwrap().as_str().unwrap(),"$options": "i"}}.into();
-            let doc = doc! { k: bson::Regex {pattern:filter.get(k).unwrap().as_str().unwrap().to_string(),options:"m".to_string()}}.into();
-            list.push(doc);
+            if !k.eq("_id") {
+                let doc = doc! { k: bson::Regex {pattern:filter.get(k).unwrap().as_str().unwrap().to_string(),options:"m".to_string()}}.into();
+                list.push(doc);
+            } else {
+                let oid = filter.get("_id").unwrap().as_str().unwrap();
+                let oid = ObjectId::with_string(oid).unwrap();
+                d.insert("_id", oid);
+            }
         }
         if list.len() > 0 {
             d.insert("$and", bson::Bson::Array(list));
         }
-        info!("d = {:?}", d);
-        info!("opt = {:#?}", opt);
         let mut cursor = self.coll.find(Some(d), opt).await.unwrap();
         let list = cursor.as_vec().await;
         match list {
@@ -166,8 +172,14 @@ impl Dao {
         for k in keys.into_iter() {
             // let doc =
             //     doc! {k:{"$regex":filter.get(k).unwrap().as_str().unwrap(),"$options": "i"}}.into();
-            let doc = doc! { k: bson::Regex {pattern:filter.get(k).unwrap().as_str().unwrap().to_string(),options:"m".to_string()}}.into();
-            list.push(doc);
+            if !k.eq("_id") {
+                let doc = doc! { k: bson::Regex {pattern:filter.get(k).unwrap().as_str().unwrap().to_string(),options:"m".to_string()}}.into();
+                list.push(doc);
+            } else {
+                let oid = filter.get("_id").unwrap().as_str().unwrap();
+                let oid = ObjectId::with_string(oid).unwrap();
+                d.insert("_id", oid);
+            }
         }
         if list.len() > 0 {
             d.insert("$and", bson::Bson::Array(list));
@@ -182,12 +194,14 @@ impl Dao {
     }
 
     /// 更新数据
-    pub async fn update(
-        &self,
-        id: ObjectId,
-        data: Document,
-    ) -> Result<Option<Document>, BusinessError> {
-        let filter = doc! {"_id":id};
+    pub async fn update(&self, data: Document) -> Result<Option<Document>, BusinessError> {
+        let oid = match data.get_object_id("_id") {
+            Ok(id) => id.to_hex(),
+            Err(_) => data.get("_id").unwrap().to_string(),
+        };
+        let oid = bson::oid::ObjectId::with_string(oid.as_str()).unwrap();
+        let filter = doc! {"_id":oid};
+
         let mut doc = data;
         doc.insert("update_time", date_time::timestamp());
         doc.remove("_id");
