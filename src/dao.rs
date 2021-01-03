@@ -195,11 +195,12 @@ impl Dao {
 
     /// 更新数据
     pub async fn update(&self, data: Document) -> Result<Option<Document>, BusinessError> {
-        let oid = match data.get_object_id("_id") {
-            Ok(id) => id.to_hex(),
-            Err(_) => data.get("_id").unwrap().to_string(),
-        };
-        let oid = bson::oid::ObjectId::with_string(oid.as_str()).unwrap();
+        // let oid = match data.get_object_id("_id") {
+        //     Ok(id) => id.to_hex(),
+        //     Err(_) => data.get("_id").unwrap().as_str().unwrap(),
+        // };
+        let oid = data.get("_id").unwrap().as_str().unwrap();
+        let oid = bson::oid::ObjectId::with_string(oid).unwrap();
         let filter = doc! {"_id":oid};
 
         let mut doc = data;
@@ -260,7 +261,15 @@ impl Dao {
         let d = doc! {"_id":doc};
         let result = self.coll.delete_many(d, None).await;
         match result {
-            Ok(res) => Ok(res.deleted_count),
+            Ok(res) => {
+                if res.deleted_count > 0 {
+                    Ok(res.deleted_count)
+                } else {
+                    return Err(BusinessError::InternalError {
+                        source: anyhow!("删除失败,请提供正确的id"),
+                    });
+                }
+            }
             Err(_) => {
                 return Err(BusinessError::InternalError {
                     source: anyhow!("删除失败"),

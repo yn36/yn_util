@@ -4,7 +4,6 @@ use bson::{doc, oid::ObjectId, Document};
 use futures::StreamExt;
 use md5;
 use mongodb::Cursor;
-use serde::de::DeserializeOwned;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -13,7 +12,7 @@ pub enum BusinessError {
     ValidationError { field: String },
     #[error("10002#参数错误")]
     ArgumentError,
-    #[error("10000#{source}")]
+    #[error("{source}")]
     InternalError {
         #[source]
         source: anyhow::Error,
@@ -35,7 +34,7 @@ impl BusinessError {
 
 impl error::ResponseError for BusinessError {
     fn error_response(&self) -> HttpResponse {
-        let resp = Resp::err(self.to_code(), &self.to_message());
+        let resp = Resp::err(400, &self.to_message());
         HttpResponse::BadRequest().json(resp)
     }
 }
