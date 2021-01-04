@@ -1,20 +1,15 @@
 use super::*;
 use crate::utils::*;
 use bson::{oid::ObjectId, Document};
-use core::fmt;
-use futures::StreamExt;
 use mongodb::{
     bson::doc,
     options::{
         ClientOptions, CountOptions, FindOneAndUpdateOptions, FindOneOptions, FindOptions,
         ReturnDocument,
     },
-    Client, Collection, Cursor, Database,
+    Client, Collection, Database,
 };
-use serde::{
-    de::{self, DeserializeOwned},
-    Deserialize, Deserializer, Serialize, Serializer,
-};
+use serde::Serialize;
 use std::sync::Mutex;
 use std::time::Duration;
 

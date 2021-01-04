@@ -8,15 +8,20 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum BusinessError {
-    #[error("10001#字段上的验证错误: {field}")]
+    #[error("字段上的验证错误: {field}")]
     ValidationError { field: String },
-    #[error("10002#参数错误")]
-    ArgumentError,
+    #[error("参数错误: {source}")]
+    ArgumentError {
+        #[source]
+        source: anyhow::Error,
+    },
     #[error("{source}")]
     InternalError {
         #[source]
         source: anyhow::Error,
     },
+    #[error("用户未认证")]
+    Unauthorized,
 }
 
 impl BusinessError {
@@ -28,14 +33,31 @@ impl BusinessError {
 
     #[allow(dead_code)]
     fn to_message(&self) -> String {
-        self.to_string()[6..].to_owned()
+        self.to_string().to_owned()
+        // self.to_string()[6..].to_owned()
     }
 }
 
 impl error::ResponseError for BusinessError {
     fn error_response(&self) -> HttpResponse {
-        let resp = Resp::err(400, &self.to_message());
-        HttpResponse::BadRequest().json(resp)
+        match self {
+            BusinessError::ValidationError { field: _ } => {
+                let resp = Resp::err(400, &self.to_message());
+                HttpResponse::BadRequest().json(resp)
+            }
+            BusinessError::ArgumentError { source: _ } => {
+                let resp = Resp::err(400, &self.to_message());
+                HttpResponse::BadRequest().json(resp)
+            }
+            BusinessError::InternalError { source: _ } => {
+                let resp = Resp::err(400, &self.to_message());
+                HttpResponse::BadRequest().json(resp)
+            }
+            BusinessError::Unauthorized => {
+                let resp = Resp::err(401, &self.to_message());
+                HttpResponse::Unauthorized().json(resp)
+            }
+        }
     }
 }
 
@@ -119,9 +141,6 @@ impl CursorAsVec for Cursor {
     async fn as_vec(&mut self) -> Result<Vec<Document>, BusinessError> {
         let mut list = vec![];
         while let Some(result) = self.next().await {
-            // let data = bson::from_document(result?)
-            //     .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })?;
-            // list.push(data);
             let mut data = doc! {};
             let d = result.unwrap();
             data.insert(
