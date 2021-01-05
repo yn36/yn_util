@@ -202,20 +202,31 @@ pub fn struct_to_document<'a, T: Sized + Serialize + Deserialize<'a>>(t: &T) -> 
     })
 }
 
-/// 处理文档 _id
+/// 处理文档 objectid
 #[inline]
-pub fn document_handle_id(doc: Document) -> Option<Document> {
+pub fn document_handle_id(doc: Document, ids: Vec<&str>) -> Option<Document> {
     let mut data = doc! {};
-    let oid = match doc.get_object_id("_id") {
-        Ok(id) => id.to_hex(),
-        Err(_) => doc.get("_id").unwrap().to_string(),
-    };
-    data.insert("_id", oid);
-    // 为了让 _id 排在最前面
-    for k in doc.clone().keys() {
-        if !k.eq("_id") {
+    let keys = doc.keys();
+    let handle_id = vec!["_id", "create_by", "update_by"];
+    let handle_id = [handle_id, ids].concat();
+    for k in keys {
+        if handle_id.contains(&k.as_str()) {
+            let oid = match doc.get_object_id(k) {
+                Ok(id) => id.to_hex(),
+                Err(_) => doc
+                    .get(k)
+                    .unwrap_or(&bson::Bson::Null)
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+            };
+            data.insert(k, oid);
+        } else {
             data.insert(k, doc.get(k).unwrap());
         }
+        // if !k.eq("_id") {
+        //     data.insert(k, doc.get(k).unwrap());
+        // }
     }
     Some(data)
 }

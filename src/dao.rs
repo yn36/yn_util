@@ -52,8 +52,8 @@ impl Dao {
             .as_document()
             .unwrap()
             .to_owned();
-        doc.insert("create_time", date_time::timestamp());
-        doc.insert("update_time", date_time::timestamp());
+        doc.insert("create_time", date_time::to_string());
+        doc.insert("update_time", date_time::to_string());
         doc.insert("_id", ObjectId::new());
         let ret = self.coll.insert_one(doc, None).await?;
         let oid = ret
@@ -75,7 +75,7 @@ impl Dao {
                 // let data: T = bson::from_document(d)
                 //     .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })
                 //     .unwrap();
-                let data = document_handle_id(d).unwrap();
+                let data = document_handle_id(d, vec!["_id"]).unwrap();
                 Ok(Some(data))
             }
             None => Ok(None),
@@ -90,7 +90,7 @@ impl Dao {
 
         match data {
             Some(d) => {
-                let data = document_handle_id(d).unwrap();
+                let data = document_handle_id(d, vec!["_id"]).unwrap();
                 Ok(Some(data))
             }
             None => Ok(None),
@@ -200,7 +200,7 @@ impl Dao {
         let filter = doc! {"_id":oid};
 
         let mut doc = data;
-        doc.insert("update_time", date_time::timestamp());
+        doc.insert("update_time", date_time::to_string());
         doc.remove("_id");
 
         // 删除不需要的key
@@ -230,7 +230,7 @@ impl Dao {
                 //     .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })
                 //     .unwrap();
                 // Ok(Some(data))
-                let data = document_handle_id(d).unwrap();
+                let data = document_handle_id(d, vec!["_id"]).unwrap();
                 Ok(Some(data))
             }
             None => Ok(None),
