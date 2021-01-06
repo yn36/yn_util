@@ -76,7 +76,7 @@ where
     // 操作是否成功 true.成功 / false.失败
     success: bool,
     // 响应信息
-    messages: String,
+    message: String,
     // 页数
     page: Option<i64>,
     // 每页最大值
@@ -93,7 +93,7 @@ impl<T: Serialize> Resp<T> {
     #[inline]
     pub fn ok(
         data: Option<T>,
-        messages: &str,
+        message: &str,
         page: Option<i64>,
         page_size: Option<i64>,
         total: Option<i64>,
@@ -104,7 +104,7 @@ impl<T: Serialize> Resp<T> {
             page,
             page_size,
             total,
-            messages: messages.to_owned(),
+            message: message.to_owned(),
             data,
         }
     }
@@ -118,14 +118,14 @@ impl<T: Serialize> Resp<T> {
 impl Resp<()> {
     #[allow(dead_code)]
     #[inline]
-    pub fn err(error: i32, messages: &str) -> Self {
+    pub fn err(error: i32, message: &str) -> Self {
         Resp {
             success: false,
             code: error,
             page: None,
             page_size: None,
             total: None,
-            messages: messages.to_owned(),
+            message: message.to_owned(),
             data: None,
         }
     }
