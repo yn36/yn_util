@@ -75,7 +75,7 @@ impl Dao {
                 // let data: T = bson::from_document(d)
                 //     .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })
                 //     .unwrap();
-                let data = document_handle_id(d, vec!["_id"]).unwrap();
+                let data = document_handle_id(d, None).unwrap();
                 Ok(Some(data))
             }
             None => Ok(None),
@@ -90,7 +90,7 @@ impl Dao {
 
         match data {
             Some(d) => {
-                let data = document_handle_id(d, vec!["_id"]).unwrap();
+                let data = document_handle_id(d, None).unwrap();
                 Ok(Some(data))
             }
             None => Ok(None),
@@ -105,10 +105,13 @@ impl Dao {
         page: Option<i64>,
         sort_name: Option<String>,
         sort_order: Option<String>,
+        is_all: bool,
     ) -> Result<Vec<Document>, BusinessError> {
         let mut opt = FindOptions::default();
-        // 限制条数
-        opt.limit = Some(limit.unwrap_or(10));
+        if !is_all {
+            // 限制条数
+            opt.limit = Some(limit.unwrap_or(10));
+        }
 
         // 设置一页多少条
         let skip = limit.unwrap_or(10) * (page.unwrap_or(1) - 1);
@@ -153,7 +156,13 @@ impl Dao {
         let mut cursor = self.coll.find(Some(d), opt).await.unwrap();
         let list = cursor.as_vec().await;
         match list {
-            Ok(list) => Ok(list),
+            Ok(list) => {
+                let mut v = vec![];
+                for item in list {
+                    v.push(document_handle_id(item, None).unwrap())
+                }
+                Ok(v)
+            }
             Err(e) => Err(BusinessError::InternalError { source: anyhow!(e) })?,
         }
     }
@@ -230,7 +239,7 @@ impl Dao {
                 //     .map_err(|e| BusinessError::InternalError { source: anyhow!(e) })
                 //     .unwrap();
                 // Ok(Some(data))
-                let data = document_handle_id(d, vec!["_id"]).unwrap();
+                let data = document_handle_id(d, None).unwrap();
                 Ok(Some(data))
             }
             None => Ok(None),

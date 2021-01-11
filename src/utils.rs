@@ -204,11 +204,13 @@ pub fn struct_to_document<'a, T: Sized + Serialize + Deserialize<'a>>(t: &T) -> 
 
 /// 处理文档 objectid
 #[inline]
-pub fn document_handle_id(doc: Document, ids: Vec<&str>) -> Option<Document> {
+pub fn document_handle_id(doc: Document, ids: Option<Vec<&str>>) -> Option<Document> {
     let mut data = doc! {};
     let keys = doc.keys();
     let handle_id = vec!["_id", "create_by", "update_by"];
-    let handle_id = [handle_id, ids].concat();
+    // if !ids.is_none() {
+    let handle_id = [handle_id, ids.unwrap_or_else(|| vec![])].concat();
+    // };
     for k in keys {
         if handle_id.contains(&k.as_str()) {
             let oid = match doc.get_object_id(k) {
@@ -217,10 +219,14 @@ pub fn document_handle_id(doc: Document, ids: Vec<&str>) -> Option<Document> {
                     .get(k)
                     .unwrap_or(&bson::Bson::Null)
                     .as_str()
-                    .unwrap()
+                    .unwrap_or("")
                     .to_string(),
             };
-            data.insert(k, oid);
+            if !oid.is_empty() {
+                data.insert(k, oid);
+            } else {
+                data.insert(k, &bson::Bson::Null);
+            }
         } else {
             data.insert(k, doc.get(k).unwrap());
         }
