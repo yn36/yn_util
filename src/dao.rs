@@ -33,7 +33,7 @@ pub fn collection(name: &str) -> Collection {
 }
 
 pub struct Dao {
-    coll: Collection,
+    pub coll: Collection,
 }
 
 impl Dao {
