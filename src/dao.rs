@@ -33,7 +33,7 @@ pub fn collection(name: &str) -> Collection {
 }
 
 pub struct Dao {
-    pub coll: Collection,
+    coll: Collection,
 }
 
 impl Dao {
@@ -61,6 +61,26 @@ impl Dao {
             .as_object_id()
             .expect("Retrieved _id should have been of type ObjectId");
         Ok(oid.to_owned())
+    }
+
+    /// 保存多条数据
+    pub async fn save_many(
+        &self,
+        datas: impl IntoIterator<Item = Document>,
+    ) -> Result<mongodb::results::InsertManyResult, BusinessError> {
+        let mut docs = vec![];
+        for mut doc in datas {
+            doc.insert("create_time", date_time::to_string());
+            doc.insert("update_time", date_time::to_string());
+            doc.insert("_id", ObjectId::new());
+            docs.push(doc)
+        }
+        info!("docs = {:?}", docs);
+        let ret = self.coll.insert_many(docs, None).await;
+        match ret {
+            Ok(value) => Ok(value),
+            Err(e) => return Err(BusinessError::InternalError { source: anyhow!(e) }),
+        }
     }
 
     /// 根据id 查询一条
