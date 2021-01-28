@@ -85,14 +85,14 @@ where
     total: Option<i64>,
     code: i32,
     // 数据内容
-    data: Option<T>,
+    body: Option<T>,
 }
 
 impl<T: Serialize> Resp<T> {
     #[allow(dead_code)]
     #[inline]
     pub fn ok(
-        data: Option<T>,
+        body: Option<T>,
         message: &str,
         page: Option<i64>,
         page_size: Option<i64>,
@@ -105,7 +105,7 @@ impl<T: Serialize> Resp<T> {
             page_size,
             total,
             message: message.to_owned(),
-            data,
+            body,
         }
     }
 
@@ -126,7 +126,7 @@ impl Resp<()> {
             page_size: None,
             total: None,
             message: message.to_owned(),
-            data: None,
+            body: None,
         }
     }
 }
