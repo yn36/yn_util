@@ -190,11 +190,19 @@ impl Dao {
         let mut d = doc! {};
         let mut list = vec![];
         for k in keys.into_iter() {
-            // let doc =
-            //     doc! {k:{"$regex":filter.get(k).unwrap().as_str().unwrap(),"$options": "i"}}.into();
             if !k.eq("_id") {
-                let doc = doc! { k: bson::Regex {pattern:filter.get(k).unwrap().as_str().unwrap().to_string(),options:"m".to_string()}}.into();
-                list.push(doc);
+                match filter.get(k).unwrap().as_str() {
+                    Some(_) => {
+                        let doc = doc! { k: bson::Regex {pattern:filter.get(k).unwrap().as_str().unwrap().to_string(),options:"i".to_string()}}.into();
+                        list.push(doc);
+                    }
+                    None => {
+                        let doc =
+                            doc! { k:bson::Bson::Int32(filter.get(k).unwrap().as_i32().unwrap())}
+                                .into();
+                        list.push(doc);
+                    }
+                }
             } else {
                 let oid = filter.get("_id").unwrap().as_str().unwrap();
                 let oid = ObjectId::with_string(oid).unwrap();
@@ -204,6 +212,7 @@ impl Dao {
         if list.len() > 0 {
             d.insert("$and", bson::Bson::Array(list));
         }
+        info!("d = {:?}", d);
         let mut cursor = self.coll.find(Some(d), opt).await.unwrap();
         let list = cursor.as_vec().await;
         match list {
@@ -226,11 +235,19 @@ impl Dao {
         let mut d = doc! {};
         let mut list = vec![];
         for k in keys.into_iter() {
-            // let doc =
-            //     doc! {k:{"$regex":filter.get(k).unwrap().as_str().unwrap(),"$options": "i"}}.into();
             if !k.eq("_id") {
-                let doc = doc! { k: bson::Regex {pattern:filter.get(k).unwrap().as_str().unwrap().to_string(),options:"m".to_string()}}.into();
-                list.push(doc);
+                match filter.get(k).unwrap().as_str() {
+                    Some(_) => {
+                        let doc = doc! { k: bson::Regex {pattern:filter.get(k).unwrap().as_str().unwrap().to_string(),options:"i".to_string()}}.into();
+                        list.push(doc);
+                    }
+                    None => {
+                        let doc =
+                            doc! { k:bson::Bson::Int32(filter.get(k).unwrap().as_i32().unwrap())}
+                                .into();
+                        list.push(doc);
+                    }
+                }
             } else {
                 let oid = filter.get("_id").unwrap().as_str().unwrap();
                 let oid = ObjectId::with_string(oid).unwrap();
