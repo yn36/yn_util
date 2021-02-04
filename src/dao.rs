@@ -10,13 +10,25 @@ use mongodb::{
     Client, Collection, Database,
 };
 use serde::Serialize;
-use std::sync::Mutex;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 lazy_static! {
+    // 单个数据库
     static ref DB: Mutex<Option<Database>> = Mutex::new(None);
+    // 数据库集合  多个数据库
+    static ref DBS:Arc<HashMap<String,Mutex<Option<Database>>>> = {
+        let mut map = HashMap::new();
+        map.insert("testDB".to_string(), Mutex::new(None));
+        // 地区省份数据库
+        map.insert("position".to_string(), Mutex::new(None));
+
+        Arc::new(map)
+    };
 }
 
+/// 初始化单数据库
 pub async fn init(uri: &str, db: &str) {
     let mut options = ClientOptions::parse(uri).await.unwrap();
     options.connect_timeout = Some(Duration::from_secs(3));
@@ -27,8 +39,27 @@ pub async fn init(uri: &str, db: &str) {
     *lock = Some(client.database(db));
 }
 
-pub fn collection(name: &str) -> Collection {
-    let db = DB.lock().unwrap();
+/// 初始化多数据库集合
+pub async fn init_dbs(uri: &str) {
+    let mut options = ClientOptions::parse(uri).await.unwrap();
+    options.connect_timeout = Some(Duration::from_secs(3));
+    options.heartbeat_freq = Some(Duration::from_secs(3));
+    options.server_selection_timeout = Some(Duration::from_secs(3));
+    let client = Client::with_options(options).unwrap();
+    let keys = DBS.keys();
+
+    for key in keys.into_iter() {
+        if let Some(item) = DBS.get(key) {
+            if let Ok(mut lock) = item.lock() {
+                info!("{},数据库连接成功", key);
+                *lock = Some(client.database(key));
+            }
+        }
+    }
+}
+
+pub fn collection(db_name: &str, name: &str) -> Collection {
+    let db = DBS.get(db_name).unwrap().lock().unwrap();
     (*db).as_ref().unwrap().collection(name)
 }
 
@@ -37,8 +68,8 @@ pub struct Dao {
 }
 
 impl Dao {
-    pub fn new(name: &str) -> Self {
-        let coll = collection(name);
+    pub fn new(db_name: &str, name: &str) -> Self {
+        let coll = collection(db_name, name);
         Dao { coll }
     }
 
