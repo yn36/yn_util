@@ -100,13 +100,21 @@ impl Dao {
         datas: impl IntoIterator<Item = Document>,
     ) -> Result<mongodb::results::InsertManyResult, BusinessError> {
         let mut docs = vec![];
+
         for mut doc in datas {
             doc.insert("create_time", date_time::to_string());
             doc.insert("update_time", date_time::to_string());
             doc.insert("_id", ObjectId::new());
             docs.push(doc)
         }
-        info!("docs = {:?}", docs);
+
+        // let ret = self.coll.insert_many(docs, None).await;
+
+        // let docs = vec![
+        //     doc! { "title": "1984", "author": "George Orwell" },
+        //     doc! { "title": "Animal Farm", "author": "George Orwell" },
+        //     doc! { "title": "The Great Gatsby", "author": "F. Scott Fitzgerald" },
+        // ];
         let ret = self.coll.insert_many(docs, None).await;
         match ret {
             Ok(value) => Ok(value),
