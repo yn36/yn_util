@@ -157,6 +157,7 @@ impl Dao {
     }
 
     /// 查询
+    /// oid_type - objectid类型
     pub async fn find(
         &self,
         filter: Document,
@@ -165,6 +166,7 @@ impl Dao {
         sort_name: Option<String>,
         sort_order: Option<String>,
         is_all: bool,
+        oid_type: Option<Vec<&str>>,
     ) -> Result<Vec<Document>, BusinessError> {
         let mut opt = FindOptions::default();
         if !is_all {
@@ -197,8 +199,19 @@ impl Dao {
         let keys = filter.keys();
         let mut d = doc! {};
         let mut list = vec![];
+
+        let hoids = vec!["_id"];
+
+        let hoids = [hoids, oid_type.unwrap_or_else(|| vec![])].concat();
+
         for k in keys.into_iter() {
-            if !k.eq("_id") {
+            info!(
+                "-------k = {:?} -- -hoids = {:?} --- !hoids.contains(&k) = {:?}",
+                k,
+                hoids,
+                !hoids.contains(&k.as_str())
+            );
+            if !hoids.contains(&k.as_str()) {
                 match filter.get(k).unwrap().as_str() {
                     Some(_) => {
                         let doc = doc! { k: bson::Regex {pattern:filter.get(k).unwrap().as_str().unwrap().to_string(),options:"i".to_string()}}.into();
@@ -212,9 +225,9 @@ impl Dao {
                     }
                 }
             } else {
-                let oid = filter.get("_id").unwrap().as_str().unwrap();
+                let oid = filter.get(k).unwrap().as_str().unwrap();
                 let oid = ObjectId::with_string(oid).unwrap();
-                d.insert("_id", oid);
+                d.insert(k, oid);
             }
         }
         if list.len() > 0 {
