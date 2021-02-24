@@ -205,12 +205,6 @@ impl Dao {
         let hoids = [hoids, oid_type.unwrap_or_else(|| vec![])].concat();
 
         for k in keys.into_iter() {
-            info!(
-                "-------k = {:?} -- -hoids = {:?} --- !hoids.contains(&k) = {:?}",
-                k,
-                hoids,
-                !hoids.contains(&k.as_str())
-            );
             if !hoids.contains(&k.as_str()) {
                 match filter.get(k).unwrap().as_str() {
                     Some(_) => {
