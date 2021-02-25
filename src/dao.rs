@@ -342,7 +342,9 @@ impl Dao {
                     })
                 }
             };
-            remids.push(oid)
+            if !id.eq(&"6037528400619e13004147be") {
+                remids.push(oid)
+            }
         }
         let mut doc: Document = doc! {};
         doc.insert("$in", remids);
