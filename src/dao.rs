@@ -229,7 +229,7 @@ impl Dao {
         }
         info!("d = {:?}", d);
         let mut cursor = self.coll.find(Some(d), opt).await.unwrap();
-        let list = cursor.as_vec().await;
+        let list = cursor.as_vec(true).await;
         match list {
             Ok(list) => {
                 let mut v = vec![];

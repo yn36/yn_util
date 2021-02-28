@@ -133,27 +133,31 @@ impl Resp<()> {
 
 #[async_trait::async_trait]
 pub trait CursorAsVec {
-    async fn as_vec(&mut self) -> Result<Vec<Document>, BusinessError>;
+    async fn as_vec(&mut self, is_handle_id: bool) -> Result<Vec<Document>, BusinessError>;
 }
 
 #[async_trait::async_trait]
 impl CursorAsVec for Cursor {
-    async fn as_vec(&mut self) -> Result<Vec<Document>, BusinessError> {
+    async fn as_vec(&mut self, is_handle_id: bool) -> Result<Vec<Document>, BusinessError> {
         let mut list = vec![];
         while let Some(result) = self.next().await {
             let mut data = doc! {};
             let d = result.unwrap();
-            data.insert(
-                "_id",
-                ObjectId::to_string(d.clone().get_object_id("_id").unwrap()),
-            );
-            // 为了让 _id 排在最前面
-            for k in d.clone().keys() {
-                if !k.eq("_id") {
-                    data.insert(k, d.get(k).unwrap());
+            if is_handle_id {
+                data.insert(
+                    "_id",
+                    ObjectId::to_string(d.clone().get_object_id("_id").unwrap()),
+                );
+                // 为了让 _id 排在最前面
+                for k in d.clone().keys() {
+                    if !k.eq("_id") {
+                        data.insert(k, d.get(k).unwrap());
+                    }
                 }
+                list.push(data);
+            } else {
+                list.push(d);
             }
-            list.push(data);
         }
         Ok(list)
     }
