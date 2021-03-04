@@ -28,7 +28,7 @@ anyhow = "1.0"
 md5 = "0.7"
 
 async-trait = "0.1.42"
-futures = { version = "0.3.8", default-features = false, features = ["async-await"]}
+futures = { version = "0.3.8", default-features = false, features = ["async-await"] }
 
 # mysql = "17.0"
 # json = "*"
@@ -37,3 +37,9 @@ futures = { version = "0.3.8", default-features = false, features = ["async-awai
 # regex = "1.3"
 # redis = "0.13"
 # tera = { version = "1.0" }
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
