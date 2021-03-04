@@ -59,7 +59,14 @@ pub async fn init_dbs(uri: &str) {
 }
 
 pub fn collection(db_name: &str, name: &str) -> Collection {
-    let db = DBS.get(db_name).unwrap().lock().unwrap();
+    // let db = DBS.get(db_name).unwrap().lock().unwrap();
+    let db = match DBS.get(db_name) {
+        Some(name) => name.lock().unwrap(),
+        None => {
+            info!("{:?} 数据库连接失败~ 已连接 YNOS 数据库", db_name);
+            DBS.get("YNOS").unwrap().lock().unwrap()
+        }
+    };
     (*db).as_ref().unwrap().collection(name)
 }
 
