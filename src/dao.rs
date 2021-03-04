@@ -20,7 +20,7 @@ lazy_static! {
     // 数据库集合  多个数据库
     static ref DBS:Arc<HashMap<String,Mutex<Option<Database>>>> = {
         let mut map = HashMap::new();
-        map.insert("testDB".to_string(), Mutex::new(None));
+        map.insert("YNOS".to_string(), Mutex::new(None));
         // 地区省份数据库
         map.insert("position".to_string(), Mutex::new(None));
 
