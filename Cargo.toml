@@ -10,6 +10,7 @@ edition = "2018"
 bson = "1.1.0"
 mongodb = "1.1.1"
 lazy_static = "1.4"
+redis = { version = "0.17.0", features = ["cluster"] }
 
 actix-web-httpauth = "0.3"
 actix-cors = "0.2"
